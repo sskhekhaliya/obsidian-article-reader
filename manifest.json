@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-article-reader",
+  "name": "Article Reader",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Fetch articles from website links in clean browser reading mode and save them as beautifully formatted markdown notes in your vault.",
+  "author": "SSKhekhaliya",
+  "authorUrl": "https://www.sskhekhaliya.in/",
+  "fundingUrl": "https://buymeacoffee.com/sskhekhaliya",
+  "isDesktopOnly": false
+}

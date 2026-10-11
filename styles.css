@@ -1,0 +1,204 @@
+/* ==========================================================================
+   Article Reader Plugin Styles
+   ========================================================================== */
+
+.article-reader-modal {
+  padding: 8px 12px;
+}
+
+.article-reader-modal-title {
+  margin: 0 0 6px 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.article-reader-modal-desc {
+  margin: 0 0 18px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.article-reader-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.article-reader-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.article-reader-field-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.article-reader-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.article-reader-input {
+  flex: 1;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-m, 6px);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 0.92rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.article-reader-input:focus {
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  outline: none;
+}
+
+.article-reader-form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.article-reader-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-m, 6px);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: 0.92rem;
+  cursor: pointer;
+  height: 38px;
+}
+
+.article-reader-select:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+}
+
+.article-reader-btn-secondary {
+  padding: 8px 14px;
+  border-radius: var(--radius-m, 6px);
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary-alt);
+  color: var(--text-normal);
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.article-reader-btn-secondary:hover {
+  background: var(--background-modifier-hover);
+}
+
+.article-reader-status {
+  min-height: 24px;
+  margin: 8px 0 14px 0;
+  font-size: 0.88rem;
+}
+
+.article-reader-status-error {
+  color: var(--text-error, #f87171);
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: var(--radius-s, 4px);
+  background: var(--background-modifier-error, rgba(239, 68, 68, 0.1));
+  display: inline-block;
+}
+
+.article-reader-status-info {
+  color: var(--text-accent);
+  font-weight: 500;
+}
+
+.article-reader-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--text-muted);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: article-reader-spin 0.75s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+@keyframes article-reader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Preview Card */
+.article-reader-preview-container {
+  margin: 12px 0 18px 0;
+}
+
+.article-reader-card {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  padding: 14px;
+  background: var(--background-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.article-reader-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.article-reader-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.article-reader-badge-subtle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.article-reader-card-excerpt {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 10px;
+  margin-top: 4px;
+  line-height: 1.45;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.article-reader-card-excerpt p {
+  margin: 0;
+}
+
+/* Actions */
+.article-reader-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}

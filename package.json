@@ -1,0 +1,35 @@
+{
+  "name": "obsidian-article-reader",
+  "version": "1.0.0",
+  "description": "Extract web articles in clean reader mode and save them as markdown notes in your Obsidian vault.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production",
+    "check": "tsc --noEmit"
+  },
+  "keywords": [
+    "obsidian",
+    "reader-mode",
+    "readability",
+    "article",
+    "web-clipper",
+    "markdown"
+  ],
+  "author": {
+    "name": "SSKhekhaliya",
+    "url": "https://www.sskhekhaliya.in/"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/turndown": "^5.0.5",
+    "esbuild": "^0.24.0",
+    "obsidian": "latest",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "turndown": "^7.2.0"
+  }
+}
