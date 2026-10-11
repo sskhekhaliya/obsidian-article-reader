@@ -89,3 +89,20 @@ npm run build
 # Type check
 npm run check
 ```
+
+---
+
+## 📚 Support
+
+If you find **Article Reader** helpful for your reading and note-taking workflow, consider buying me a book:
+
+[![Buy Me a Book](https://img.shields.io/badge/Buy%20Me%20a%20Book-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/sskhekhaliya)
+
+---
+
+## 📄 License & Credits
+
+- **Author**: [SSKhekhaliya](https://www.sskhekhaliya.in/)
+- **Support**: [buymeacoffee.com/sskhekhaliya](https://buymeacoffee.com/sskhekhaliya)
+- **Engine**: Powered by [Mozilla Readability](https://github.com/mozilla/readability) and [Turndown](https://github.com/mixmark-io/turndown)
+- Built with ❤️ for the [Obsidian](https://obsidian.md) community.
