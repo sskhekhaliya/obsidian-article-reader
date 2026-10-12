@@ -2811,6 +2811,18 @@ async function fetchAndParseArticle(rawUrl) {
   const metaAuthor = doc.querySelector('meta[name="author"]')?.getAttribute("content") || doc.querySelector('meta[property="article:author"]')?.getAttribute("content");
   const metaPublishedTime = doc.querySelector('meta[property="article:published_time"]')?.getAttribute("content") || doc.querySelector('meta[name="publication_date"]')?.getAttribute("content") || doc.querySelector("time[datetime]")?.getAttribute("datetime");
   const reader = new import_readability.Readability(doc);
+  const readerAny = reader;
+  readerAny._headerDuplicatesTitle = function(node) {
+    if (node.tagName !== "H1") {
+      return false;
+    }
+    const heading = (node.textContent || "").trim().toLowerCase();
+    const title2 = (this._articleTitle || "").trim().toLowerCase();
+    if (!heading || !title2) return false;
+    if (heading === title2) return true;
+    const lengthRatio = Math.min(heading.length, title2.length) / Math.max(heading.length, title2.length);
+    return lengthRatio > 0.8 && (heading.includes(title2) || title2.includes(heading));
+  };
   const parsedArticle = reader.parse();
   let title = "";
   let byline = metaAuthor || void 0;
@@ -2883,14 +2895,17 @@ function formatArticleNote(article, settings) {
         uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
       }
     }
-    parts.push("---\n");
+    parts.push("---");
   }
   if (settings.includeExcerpt && article.excerpt) {
-    parts.push("> [!quote] Summary");
+    parts.push("> [!summary]");
     parts.push(`> ${article.excerpt}
 `);
   }
-  parts.push(article.contentMarkdown);
+  const trimmedBody = (article.contentMarkdown || "").trim();
+  if (trimmedBody) {
+    parts.push(trimmedBody);
+  }
   return parts.join("\n");
 }
 

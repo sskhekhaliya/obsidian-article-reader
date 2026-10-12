@@ -205,6 +205,28 @@ export async function fetchAndParseArticle(rawUrl: string): Promise<ArticleData>
 
   // Use Readability
   const reader = new Readability(doc);
+
+  // Prevent Readability from erroneously deleting legitimate section headings (like H2/H3)
+  // that happen to have words in common with the article title.
+  // By default, Readability's _headerDuplicatesTitle checks H1 and H2 with a one-way token subset
+  // comparison, marking any heading whose words appear in the title as 100% duplicate.
+  const readerAny = reader as unknown as {
+    _headerDuplicatesTitle: (node: Element) => boolean;
+    _articleTitle?: string;
+  };
+  readerAny._headerDuplicatesTitle = function (node: Element): boolean {
+    if (node.tagName !== "H1") {
+      return false;
+    }
+    const heading = (node.textContent || "").trim().toLowerCase();
+    const title = (this._articleTitle || "").trim().toLowerCase();
+    if (!heading || !title) return false;
+    if (heading === title) return true;
+    const lengthRatio =
+      Math.min(heading.length, title.length) / Math.max(heading.length, title.length);
+    return lengthRatio > 0.8 && (heading.includes(title) || title.includes(heading));
+  };
+
   const parsedArticle = reader.parse();
 
   let title = "";
@@ -306,17 +328,21 @@ export function formatArticleNote(
         uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
       }
     }
-    parts.push("---\n");
+    parts.push("---");
   }
 
   // Optional Excerpt/Summary if configured
   if (settings.includeExcerpt && article.excerpt) {
-    parts.push("> [!quote] Summary");
+    parts.push("> [!summary]");
     parts.push(`> ${article.excerpt}\n`);
   }
 
-  // Main Article Body (No duplicate title heading or metadata callout banner)
-  parts.push(article.contentMarkdown);
+  // Main Article Body (No duplicate title heading in the body)
+  const trimmedBody = (article.contentMarkdown || "").trim();
+  if (trimmedBody) {
+    parts.push(trimmedBody);
+  }
 
   return parts.join("\n");
 }
+

@@ -24,7 +24,7 @@ Powered by Mozilla's Readability engine (the same algorithm behind Firefox Reade
 
 ## 📝 Example Generated Note
 
-```yaml
+```markdown
 ---
 title: "Why Great Habits Compound"
 source: "https://example.com/habits"
@@ -37,7 +37,6 @@ reading_time: "~6 min (1114 words)"
 tags:
   - reading/article
 ---
-
 Habits are the compound interest of self-improvement...
 ```
 
