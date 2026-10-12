@@ -1874,15 +1874,29 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian5 = require("obsidian");
 
 // src/types.ts
+var DEFAULT_PROPERTIES = [
+  { id: "prop-title", key: "title", field: "title", enabled: true },
+  { id: "prop-source", key: "source", field: "source", enabled: true },
+  { id: "prop-author", key: "author", field: "author", enabled: true },
+  { id: "prop-site", key: "site", field: "site", enabled: true },
+  { id: "prop-published", key: "published", field: "published", enabled: true },
+  { id: "prop-clipped", key: "clipped", field: "clipped", enabled: true },
+  { id: "prop-shelf", key: "shelf", field: "shelf", enabled: true },
+  { id: "prop-reading_time", key: "reading_time", field: "reading_time", enabled: true },
+  { id: "prop-type", key: "type", field: "type", enabled: true },
+  { id: "prop-tags", key: "tags", field: "tags", enabled: true }
+];
 var DEFAULT_SETTINGS = {
   folderPath: "Articles",
   createFolderIfMissing: true,
   titleFormat: "{{title}}",
   defaultShelf: "to-read",
-  includeFrontmatter: true,
+  defaultType: "",
   frontmatterTags: "reading/article",
   includeExcerpt: false,
-  openAfterSave: true
+  includeFrontmatter: true,
+  openAfterSave: true,
+  properties: DEFAULT_PROPERTIES
 };
 
 // src/settings.ts
@@ -1925,63 +1939,315 @@ var FolderSuggest = class extends import_obsidian.AbstractInputSuggest {
 var ArticleReaderSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
+    this.activeTab = "general";
+    this.draggedIndex = null;
     this.plugin = plugin;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Article Reader Settings" });
-    new import_obsidian2.Setting(containerEl).setName("Article Folder").setDesc("The vault folder where clipped articles will be saved. Start typing to see folder suggestions.").addText((text) => {
+    const navBar = containerEl.createDiv({ cls: "ar-settings-nav-bar" });
+    const tabs = [
+      { id: "general", label: "General", icon: "settings" },
+      { id: "properties", label: "Properties", icon: "tags" },
+      { id: "defaults", label: "Defaults", icon: "sliders" }
+    ];
+    for (const tab of tabs) {
+      const btn = navBar.createEl("button", {
+        cls: `ar-settings-tab-btn ${this.activeTab === tab.id ? "is-active" : ""}`
+      });
+      const iconSpan = btn.createSpan({ cls: "ar-settings-tab-icon" });
+      (0, import_obsidian2.setIcon)(iconSpan, tab.icon);
+      btn.createSpan({ text: tab.label });
+      btn.addEventListener("click", () => {
+        this.activeTab = tab.id;
+        this.display();
+      });
+    }
+    const tabContent = containerEl.createDiv({ cls: "ar-settings-tab-content" });
+    if (this.activeTab === "general") {
+      this.renderGeneralTab(tabContent);
+    } else if (this.activeTab === "properties") {
+      this.renderPropertiesTab(tabContent);
+    } else {
+      this.renderDefaultsTab(tabContent);
+    }
+  }
+  // ================= GENERAL TAB =================
+  renderGeneralTab(container) {
+    container.createEl("h3", { text: "Storage & Vault Locations" });
+    new import_obsidian2.Setting(container).setName("Article Folder").setDesc("The vault folder where clipped articles will be saved. Start typing to see folder suggestions.").addText((text) => {
       text.setPlaceholder("Articles").setValue(this.plugin.settings.folderPath).onChange(async (value) => {
         this.plugin.settings.folderPath = value.trim();
         await this.plugin.saveSettings();
       });
       new FolderSuggest(this.app, text.inputEl);
     });
-    new import_obsidian2.Setting(containerEl).setName("Create folder if missing").setDesc("Automatically create the folder in your vault if it doesn't already exist.").addToggle((toggle) => {
+    new import_obsidian2.Setting(container).setName("Create folder if missing").setDesc("Automatically create the folder in your vault if it doesn't already exist.").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.createFolderIfMissing).onChange(async (value) => {
         this.plugin.settings.createFolderIfMissing = value;
         await this.plugin.saveSettings();
       });
     });
-    containerEl.createEl("h3", { text: "Reading Properties & Metadata" });
-    new import_obsidian2.Setting(containerEl).setName("Default Shelf").setDesc("Default reading status assigned to clipped articles in properties.").addDropdown((dropdown) => {
-      dropdown.addOption("to-read", "To Read").addOption("currently-reading", "Currently Reading").addOption("read", "Read").setValue(this.plugin.settings.defaultShelf).onChange(async (value) => {
-        this.plugin.settings.defaultShelf = value;
-        await this.plugin.saveSettings();
-      });
-    });
-    new import_obsidian2.Setting(containerEl).setName("Note title format").setDesc("Pattern for the note title. Use {{title}} for the article title and {{date}} for YYYY-MM-DD.").addText((text) => {
+    container.createEl("h3", { text: "Note Templates & Formatting" });
+    new import_obsidian2.Setting(container).setName("Note title format").setDesc("Pattern for the note title. Use {{title}} for the article title and {{date}} for YYYY-MM-DD.").addText((text) => {
       text.setPlaceholder("{{title}}").setValue(this.plugin.settings.titleFormat).onChange(async (value) => {
         this.plugin.settings.titleFormat = value.trim() || "{{title}}";
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("Include YAML properties (frontmatter)").setDesc("Add properties (title, source, author, site, published, clipped, shelf, reading_time, tags) to the note.").addToggle((toggle) => {
+    new import_obsidian2.Setting(container).setName("Include YAML properties (frontmatter)").setDesc("Enable frontmatter properties on clipped notes. Manage which properties are enabled and their order in the Properties tab.").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.includeFrontmatter).onChange(async (value) => {
         this.plugin.settings.includeFrontmatter = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("Default tags").setDesc("Comma-separated list of tags to add to properties (e.g. reading/article).").addText((text) => {
-      text.setPlaceholder("reading/article").setValue(this.plugin.settings.frontmatterTags).onChange(async (value) => {
-        this.plugin.settings.frontmatterTags = value;
-        await this.plugin.saveSettings();
-      });
-    });
-    new import_obsidian2.Setting(containerEl).setName("Include article summary").setDesc("Include an excerpt callout at the top of the body if detected by reader mode.").addToggle((toggle) => {
+    new import_obsidian2.Setting(container).setName("Include article summary").setDesc("Include an excerpt callout ([!summary]) at the top of the body if detected by reader mode.").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.includeExcerpt).onChange(async (value) => {
         this.plugin.settings.includeExcerpt = value;
         await this.plugin.saveSettings();
       });
     });
-    containerEl.createEl("h3", { text: "Behavior" });
-    new import_obsidian2.Setting(containerEl).setName("Open note after saving").setDesc("Automatically open the newly created note in Obsidian after clipping.").addToggle((toggle) => {
+    container.createEl("h3", { text: "Editor Behavior" });
+    new import_obsidian2.Setting(container).setName("Open note after saving").setDesc("Automatically open the newly created note in Obsidian after clipping.").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.openAfterSave).onChange(async (value) => {
         this.plugin.settings.openAfterSave = value;
         await this.plugin.saveSettings();
       });
     });
+  }
+  // ================= PROPERTIES TAB =================
+  renderPropertiesTab(container) {
+    container.createEl("h3", { text: "Frontmatter Properties Manager" });
+    const desc = container.createEl("p", { cls: "setting-item-description" });
+    desc.setText(
+      "Decide which frontmatter properties are included in your notes, what their YAML keys are, and what order they appear in. Drag rows to reorder them (whichever is placed first or last will be saved in that exact order). Default values for non-extracted properties can be customized in the Defaults tab."
+    );
+    if (!this.plugin.settings.properties) {
+      this.plugin.settings.properties = JSON.parse(
+        JSON.stringify(DEFAULT_PROPERTIES)
+      );
+    }
+    const propList = container.createDiv({ cls: "ar-properties-list" });
+    const fieldLabels = {
+      title: "Article Title",
+      source: "Article Source URL",
+      author: "Author Name",
+      site: "Site Name / Hostname",
+      published: "Publication Date",
+      clipped: "Clipped Date Time",
+      shelf: "Reading Shelf",
+      reading_time: "Reading Time (~X min)",
+      type: "Type (Optional List entered during clipping)",
+      tags: "Tags List",
+      custom: "Custom Static Text"
+    };
+    this.plugin.settings.properties.forEach((prop, index) => {
+      const row = propList.createDiv({ cls: "ar-prop-row" });
+      row.setAttribute("draggable", "true");
+      row.dataset.index = String(index);
+      const dragHandle = row.createSpan({
+        cls: "ar-prop-drag-handle",
+        title: "Drag to reorder"
+      });
+      (0, import_obsidian2.setIcon)(dragHandle, "grip-vertical");
+      row.addEventListener("dragstart", (e) => {
+        this.draggedIndex = index;
+        row.addClass("is-dragging");
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", String(index));
+        }
+      });
+      row.addEventListener("dragend", () => {
+        this.draggedIndex = null;
+        row.removeClass("is-dragging");
+        propList.querySelectorAll(".ar-prop-row").forEach((el) => {
+          el.removeClass("drag-over-top");
+          el.removeClass("drag-over-bottom");
+        });
+      });
+      row.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (this.draggedIndex === null || this.draggedIndex === index) {
+          return;
+        }
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = "move";
+        }
+        const rect = row.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        if (e.clientY < mid) {
+          row.addClass("drag-over-top");
+          row.removeClass("drag-over-bottom");
+        } else {
+          row.addClass("drag-over-bottom");
+          row.removeClass("drag-over-top");
+        }
+      });
+      row.addEventListener("dragleave", () => {
+        row.removeClass("drag-over-top");
+        row.removeClass("drag-over-bottom");
+      });
+      row.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        row.removeClass("drag-over-top");
+        row.removeClass("drag-over-bottom");
+        if (this.draggedIndex === null || this.draggedIndex === index) {
+          return;
+        }
+        const rect = row.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        let targetIndex = e.clientY < mid ? index : index + 1;
+        const fromIndex = this.draggedIndex;
+        const [movedProp] = this.plugin.settings.properties.splice(fromIndex, 1);
+        if (fromIndex < targetIndex) {
+          targetIndex--;
+        }
+        this.plugin.settings.properties.splice(targetIndex, 0, movedProp);
+        this.draggedIndex = null;
+        await this.plugin.saveSettings();
+        this.display();
+      });
+      const toggle = row.createEl("input", {
+        type: "checkbox",
+        cls: "ar-prop-checkbox"
+      });
+      toggle.checked = prop.enabled;
+      toggle.title = prop.enabled ? "Enabled" : "Disabled";
+      toggle.addEventListener("change", async () => {
+        prop.enabled = toggle.checked;
+        await this.plugin.saveSettings();
+      });
+      const keyInput = row.createEl("input", {
+        type: "text",
+        cls: "ar-prop-key-input",
+        value: prop.key
+      });
+      keyInput.placeholder = "Property Key (e.g. type)";
+      keyInput.addEventListener("change", async () => {
+        prop.key = keyInput.value.trim() || prop.field;
+        await this.plugin.saveSettings();
+      });
+      const fieldBadge = row.createSpan({ cls: "ar-prop-field-badge" });
+      fieldBadge.setText(fieldLabels[prop.field] || prop.field);
+      const delBtn = row.createEl("button", {
+        cls: "ar-prop-del-btn",
+        title: "Delete property"
+      });
+      (0, import_obsidian2.setIcon)(delBtn, "trash-2");
+      delBtn.addEventListener("click", async () => {
+        this.plugin.settings.properties.splice(index, 1);
+        await this.plugin.saveSettings();
+        this.display();
+      });
+    });
+    const addCard = container.createDiv({ cls: "ar-add-prop-card" });
+    addCard.createEl("h4", { text: "Add Property" });
+    const addControls = addCard.createDiv({ cls: "ar-add-prop-controls" });
+    const selectField = addControls.createEl("select", { cls: "ar-select" });
+    const availableFields = [
+      { id: "type", label: "Type (Optional List entered during clipping)" },
+      { id: "shelf", label: "Reading Shelf" },
+      { id: "title", label: "Article Title" },
+      { id: "source", label: "Article Source URL" },
+      { id: "author", label: "Author Name" },
+      { id: "site", label: "Site Name / Hostname" },
+      { id: "published", label: "Publication Date" },
+      { id: "clipped", label: "Clipped Date Time" },
+      { id: "reading_time", label: "Reading Time (~X min)" },
+      { id: "tags", label: "Tags List" },
+      { id: "custom", label: "Custom Static Text" }
+    ];
+    for (const af of availableFields) {
+      selectField.createEl("option", { value: af.id, text: af.label });
+    }
+    const newKeyInput = addControls.createEl("input", {
+      type: "text",
+      placeholder: "Property key (e.g. type, category, label)",
+      value: "type"
+    });
+    selectField.addEventListener("change", () => {
+      newKeyInput.value = selectField.value;
+    });
+    const addBtn = addControls.createEl("button", {
+      text: "Add Property",
+      cls: "mod-cta"
+    });
+    addBtn.addEventListener("click", async () => {
+      const field = selectField.value;
+      const key = newKeyInput.value.trim() || field;
+      const newProp = {
+        id: `prop-${Date.now()}`,
+        key,
+        field,
+        enabled: true,
+        customValue: field === "custom" ? "article" : void 0
+      };
+      this.plugin.settings.properties.push(newProp);
+      await this.plugin.saveSettings();
+      new import_obsidian2.Notice(`Added property "${key}"`);
+      this.display();
+    });
+    const resetRow = container.createDiv({ cls: "ar-prop-reset-row" });
+    const resetBtn = resetRow.createEl("button", {
+      text: "Reset Properties to Defaults",
+      cls: "ar-reset-btn"
+    });
+    resetBtn.addEventListener("click", async () => {
+      const ok = window.confirm(
+        "Reset all frontmatter properties back to standard default fields?"
+      );
+      if (ok) {
+        this.plugin.settings.properties = JSON.parse(
+          JSON.stringify(DEFAULT_PROPERTIES)
+        );
+        await this.plugin.saveSettings();
+        new import_obsidian2.Notice("Properties reset to defaults");
+        this.display();
+      }
+    });
+  }
+  // ================= DEFAULTS TAB =================
+  renderDefaultsTab(container) {
+    container.createEl("h3", { text: "Default Property Values" });
+    const desc = container.createEl("p", { cls: "setting-item-description" });
+    desc.setText(
+      "Configure default values for properties that are not extracted automatically from the web page (such as reading shelf, type, tags, or custom text). If an enabled property is left empty during clipping, it will still appear in your note's frontmatter as an empty field."
+    );
+    new import_obsidian2.Setting(container).setName("Default Shelf").setDesc("Default reading status assigned in properties when clipping an article.").addDropdown((dropdown) => {
+      dropdown.addOption("to-read", "To Read").addOption("currently-reading", "Currently Reading").addOption("read", "Read").addOption("", "None (Empty)").setValue(this.plugin.settings.defaultShelf).onChange(async (value) => {
+        this.plugin.settings.defaultShelf = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    const typeProp = this.plugin.settings.properties?.find((p) => p.field === "type");
+    const typeLabel = (typeProp?.key || "type").charAt(0).toUpperCase() + (typeProp?.key || "type").slice(1);
+    new import_obsidian2.Setting(container).setName(`Default ${typeLabel}`).setDesc(`Default value for the ${typeLabel} property (comma-separated, e.g. article, guide). Leave empty for no default.`).addText((text) => {
+      text.setPlaceholder("e.g. article").setValue(this.plugin.settings.defaultType || "").onChange(async (value) => {
+        this.plugin.settings.defaultType = value.trim();
+        await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian2.Setting(container).setName("Default Tags").setDesc("Base tags added to properties (without #, comma-separated, e.g. reading/article). Leave empty for no default tags.").addText((text) => {
+      text.setPlaceholder("reading/article").setValue(this.plugin.settings.frontmatterTags).onChange(async (value) => {
+        this.plugin.settings.frontmatterTags = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    const customProps = this.plugin.settings.properties?.filter((p) => p.field === "custom") || [];
+    if (customProps.length > 0) {
+      container.createEl("h4", { text: "Custom Properties Defaults" });
+      customProps.forEach((cp) => {
+        new import_obsidian2.Setting(container).setName(`Default Value: ${cp.key}`).setDesc(`Static default value for custom property "${cp.key}".`).addText((text) => {
+          text.setPlaceholder("Value (e.g. article)").setValue(cp.customValue || "").onChange(async (val) => {
+            cp.customValue = val;
+            await this.plugin.saveSettings();
+          });
+        });
+      });
+    }
   }
 };
 
@@ -2870,29 +3136,84 @@ async function fetchAndParseArticle(rawUrl) {
 function formatArticleNote(article, settings) {
   const parts = [];
   if (settings.includeFrontmatter) {
+    const properties = settings.properties || DEFAULT_PROPERTIES;
     parts.push("---");
-    parts.push(`title: "${article.title.replace(/"/g, '\\"')}"`);
-    parts.push(`source: "${article.url}"`);
-    if (article.byline) {
-      parts.push(`author: "${article.byline.replace(/"/g, '\\"')}"`);
-    }
-    if (article.siteName) {
-      parts.push(`site: "${article.siteName.replace(/"/g, '\\"')}"`);
-    }
-    if (article.publishedTime) {
-      parts.push(`published: ${article.publishedTime}`);
-    }
-    parts.push(`clipped: ${article.clippedAt}`);
-    parts.push(`shelf: ${article.shelf || settings.defaultShelf}`);
-    parts.push(
-      `reading_time: "~${article.readingTimeMinutes} min (${article.wordCount} words)"`
-    );
-    if (settings.frontmatterTags && settings.frontmatterTags.trim()) {
-      const tags = settings.frontmatterTags.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean).map((t) => t === "article" ? "reading/article" : t);
-      const uniqueTags = Array.from(new Set(tags));
-      if (uniqueTags.length > 0) {
-        parts.push("tags:");
-        uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
+    for (const prop of properties) {
+      if (!prop.enabled || !prop.key.trim()) continue;
+      const key = prop.key.trim();
+      switch (prop.field) {
+        case "title":
+          parts.push(`${key}: "${article.title.replace(/"/g, '\\"')}"`);
+          break;
+        case "source":
+          parts.push(`${key}: "${article.url}"`);
+          break;
+        case "author":
+          if (article.byline) {
+            parts.push(`${key}: "${article.byline.replace(/"/g, '\\"')}"`);
+          } else {
+            parts.push(`${key}: ""`);
+          }
+          break;
+        case "site":
+          if (article.siteName) {
+            parts.push(`${key}: "${article.siteName.replace(/"/g, '\\"')}"`);
+          } else {
+            parts.push(`${key}: ""`);
+          }
+          break;
+        case "published":
+          if (article.publishedTime) {
+            parts.push(`${key}: ${article.publishedTime}`);
+          } else {
+            parts.push(`${key}:`);
+          }
+          break;
+        case "clipped":
+          parts.push(`${key}: ${article.clippedAt}`);
+          break;
+        case "shelf": {
+          const shelfVal = article.shelf !== void 0 ? article.shelf : settings.defaultShelf;
+          if (shelfVal) {
+            parts.push(`${key}: ${shelfVal}`);
+          } else {
+            parts.push(`${key}:`);
+          }
+          break;
+        }
+        case "reading_time":
+          parts.push(
+            `${key}: "~${article.readingTimeMinutes} min (${article.wordCount} words)"`
+          );
+          break;
+        case "type": {
+          const typeList = article.types !== void 0 ? article.types : settings.defaultType ? settings.defaultType.split(",").map((t) => t.trim()).filter(Boolean) : [];
+          if (typeList.length > 0) {
+            parts.push(`${key}:`);
+            for (const t of typeList) {
+              parts.push(`  - ${t}`);
+            }
+          } else {
+            parts.push(`${key}: []`);
+          }
+          break;
+        }
+        case "tags": {
+          const tagList = article.tags !== void 0 ? article.tags : settings.frontmatterTags ? settings.frontmatterTags.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean) : [];
+          const uniqueTags = Array.from(new Set(tagList));
+          if (uniqueTags.length > 0) {
+            parts.push(`${key}:`);
+            uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
+          } else {
+            parts.push(`${key}: []`);
+          }
+          break;
+        }
+        case "custom":
+          parts.push(`${key}: ${JSON.stringify(prop.customValue || "")}`);
+          break;
+        default:
+          break;
       }
     }
     parts.push("---");
@@ -2953,8 +3274,20 @@ var ArticleUrlModal = class extends import_obsidian4.Modal {
         new import_obsidian4.Notice("Unable to read from clipboard.");
       }
     });
+    const isShelfEnabled = this.plugin.settings.properties?.some(
+      (p) => p.field === "shelf" && p.enabled
+    );
+    const typeProp = this.plugin.settings.properties?.find(
+      (p) => p.field === "type" && p.enabled
+    );
+    const isTagsEnabled = this.plugin.settings.properties?.some(
+      (p) => p.field === "tags" && p.enabled
+    );
     const rowEl = formEl.createDiv({ cls: "article-reader-form-row" });
-    const folderGroup = rowEl.createDiv({ cls: "article-reader-field-group", attr: { style: "flex: 2;" } });
+    const folderGroup = rowEl.createDiv({
+      cls: "article-reader-field-group",
+      attr: { style: isShelfEnabled ? "flex: 2;" : "flex: 1;" }
+    });
     folderGroup.createEl("label", { text: "Save in Folder" });
     const folderInputWrap = folderGroup.createDiv({ cls: "article-reader-input-wrap" });
     this.folderInputEl = folderInputWrap.createEl("input", {
@@ -2964,23 +3297,64 @@ var ArticleUrlModal = class extends import_obsidian4.Modal {
     });
     this.folderInputEl.value = this.plugin.settings.folderPath;
     new FolderSuggest(this.app, this.folderInputEl);
-    const shelfGroup = rowEl.createDiv({ cls: "article-reader-field-group", attr: { style: "flex: 1;" } });
-    shelfGroup.createEl("label", { text: "Reading Shelf" });
-    this.shelfSelectEl = shelfGroup.createEl("select", { cls: "article-reader-select" });
-    const shelfOptions = [
-      { value: "to-read", label: "To Read" },
-      { value: "currently-reading", label: "Currently Reading" },
-      { value: "read", label: "Read" }
-    ];
-    shelfOptions.forEach((opt) => {
-      const optionEl = this.shelfSelectEl.createEl("option", {
-        value: opt.value,
-        text: opt.label
+    if (isShelfEnabled) {
+      const shelfGroup = rowEl.createDiv({
+        cls: "article-reader-field-group",
+        attr: { style: "flex: 1;" }
       });
-      if (opt.value === this.plugin.settings.defaultShelf) {
-        optionEl.selected = true;
+      shelfGroup.createEl("label", { text: "Reading Shelf" });
+      this.shelfSelectEl = shelfGroup.createEl("select", { cls: "article-reader-select" });
+      const shelfOptions = [
+        { value: "", label: "None / Empty" },
+        { value: "to-read", label: "To Read" },
+        { value: "currently-reading", label: "Currently Reading" },
+        { value: "read", label: "Read" }
+      ];
+      shelfOptions.forEach((opt) => {
+        const optionEl = this.shelfSelectEl.createEl("option", {
+          value: opt.value,
+          text: opt.label
+        });
+        if (opt.value === this.plugin.settings.defaultShelf) {
+          optionEl.selected = true;
+        }
+      });
+    }
+    if (typeProp || isTagsEnabled) {
+      const metaRowEl = formEl.createDiv({ cls: "article-reader-form-row" });
+      if (typeProp) {
+        const typeKey = typeProp.key || "type";
+        const typeLabel = typeKey.charAt(0).toUpperCase() + typeKey.slice(1);
+        const typeGroup = metaRowEl.createDiv({
+          cls: "article-reader-field-group",
+          attr: { style: "flex: 1;" }
+        });
+        typeGroup.createEl("label", { text: typeLabel });
+        this.typeInputEl = typeGroup.createEl("input", {
+          type: "text",
+          placeholder: "e.g. article, guide",
+          cls: "article-reader-input"
+        });
+        if (this.plugin.settings.defaultType) {
+          this.typeInputEl.value = this.plugin.settings.defaultType;
+        }
       }
-    });
+      if (isTagsEnabled) {
+        const tagsGroup = metaRowEl.createDiv({
+          cls: "article-reader-field-group",
+          attr: { style: "flex: 1;" }
+        });
+        tagsGroup.createEl("label", { text: "Tags" });
+        this.tagsInputEl = tagsGroup.createEl("input", {
+          type: "text",
+          placeholder: "e.g. reading/article, tech",
+          cls: "article-reader-input"
+        });
+        if (this.plugin.settings.frontmatterTags) {
+          this.tagsInputEl.value = this.plugin.settings.frontmatterTags;
+        }
+      }
+    }
     this.statusEl = contentEl.createDiv({ cls: "article-reader-status" });
     this.previewContainerEl = contentEl.createDiv({
       cls: "article-reader-preview-container"
@@ -2992,11 +3366,11 @@ var ArticleUrlModal = class extends import_obsidian4.Modal {
       cls: "article-reader-btn-secondary"
     });
     cancelBtn.addEventListener("click", () => this.close());
-    const fetchBtn = this.actionButtonsEl.createEl("button", {
+    this.fetchBtnEl = this.actionButtonsEl.createEl("button", {
       text: "Fetch & Save",
       cls: "mod-cta article-reader-btn-primary"
     });
-    fetchBtn.addEventListener("click", () => this.handleFetchAndSave());
+    this.fetchBtnEl.addEventListener("click", () => this.handleFetchAndSave());
     this.urlInputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !this.isLoading) {
         e.preventDefault();
@@ -3037,25 +3411,37 @@ var ArticleUrlModal = class extends import_obsidian4.Modal {
       return;
     }
     this.isLoading = true;
+    if (this.fetchBtnEl) {
+      this.fetchBtnEl.disabled = true;
+      this.fetchBtnEl.setText("Fetching...");
+    }
     this.setStatus("Fetching article in reader mode...");
     try {
       const article = await fetchAndParseArticle(rawUrl);
       this.fetchedArticle = article;
       this.renderPreview(article);
       const targetFolder = this.folderInputEl.value.trim();
-      const selectedShelf = this.shelfSelectEl.value;
+      const selectedShelf = this.shelfSelectEl ? this.shelfSelectEl.value : void 0;
       const customTitle = this.customTitleInputEl?.value?.trim() || article.title;
+      const types = this.typeInputEl ? this.typeInputEl.value.split(",").map((t) => t.trim()).filter(Boolean) : void 0;
+      const tags = this.tagsInputEl ? this.tagsInputEl.value.split(",").map((t) => t.trim().replace(/^#/, "")).filter(Boolean) : void 0;
       this.setStatus("Saving note to vault...");
       const savedFile = await this.plugin.saveArticleToVault(
         article,
         targetFolder,
         customTitle,
-        selectedShelf
+        selectedShelf,
+        types,
+        tags
       );
       this.close();
       new import_obsidian4.Notice(`Article saved: ${savedFile.basename}`);
     } catch (err) {
       this.isLoading = false;
+      if (this.fetchBtnEl) {
+        this.fetchBtnEl.disabled = false;
+        this.fetchBtnEl.setText("Fetch & Save");
+      }
       const message = err instanceof Error ? err.message : String(err);
       this.setStatus(`Error: ${message}`, true);
     }
@@ -3125,6 +3511,19 @@ var ArticleReaderPlugin = class extends import_obsidian5.Plugin {
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    if (!this.settings.properties || !Array.isArray(this.settings.properties) || this.settings.properties.length === 0) {
+      this.settings.properties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+    } else {
+      const existingFieldIds = new Set(this.settings.properties.map((p) => p.field));
+      for (const defProp of DEFAULT_PROPERTIES) {
+        if (!existingFieldIds.has(defProp.field)) {
+          this.settings.properties.push({ ...defProp });
+        }
+      }
+    }
+    if (this.settings.defaultType === void 0) {
+      this.settings.defaultType = "";
+    }
     if (this.settings.frontmatterTags) {
       const tagList = this.settings.frontmatterTags.split(",").map((t) => t.trim()).map((t) => t === "article" ? "reading/article" : t);
       this.settings.frontmatterTags = Array.from(new Set(tagList)).join(", ");
@@ -3206,8 +3605,14 @@ var ArticleReaderPlugin = class extends import_obsidian5.Plugin {
   /**
    * Saves a parsed article into vault as a markdown note.
    */
-  async saveArticleToVault(article, folderOverride, customTitle, shelfOverride) {
-    article.shelf = shelfOverride || article.shelf || this.settings.defaultShelf;
+  async saveArticleToVault(article, folderOverride, customTitle, shelfOverride, typesOverride, tagsOverride) {
+    article.shelf = shelfOverride !== void 0 ? shelfOverride : article.shelf !== void 0 ? article.shelf : this.settings.defaultShelf;
+    if (typesOverride !== void 0) {
+      article.types = typesOverride;
+    }
+    if (tagsOverride !== void 0) {
+      article.tags = tagsOverride;
+    }
     const targetFolder = typeof folderOverride === "string" ? folderOverride : this.settings.folderPath;
     const folderPath = await this.ensureFolderExists(targetFolder);
     const nowStr = (/* @__PURE__ */ new Date()).toISOString().substring(0, 10);

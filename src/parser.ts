@@ -1,7 +1,7 @@
 import { requestUrl } from "obsidian";
 import { Readability } from "@mozilla/readability";
 import TurndownService from "turndown";
-import { ArticleData, ArticleReaderSettings } from "./types";
+import { ArticleData, ArticleReaderSettings, DEFAULT_PROPERTIES } from "./types";
 
 export function formatToIsoDateTime(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -297,37 +297,102 @@ export function formatArticleNote(
 
   // Frontmatter Properties
   if (settings.includeFrontmatter) {
+    const properties = settings.properties || DEFAULT_PROPERTIES;
     parts.push("---");
-    parts.push(`title: "${article.title.replace(/"/g, '\\"')}"`);
-    parts.push(`source: "${article.url}"`);
-    if (article.byline) {
-      parts.push(`author: "${article.byline.replace(/"/g, '\\"')}"`);
-    }
-    if (article.siteName) {
-      parts.push(`site: "${article.siteName.replace(/"/g, '\\"')}"`);
-    }
-    if (article.publishedTime) {
-      parts.push(`published: ${article.publishedTime}`);
-    }
-    parts.push(`clipped: ${article.clippedAt}`);
-    parts.push(`shelf: ${article.shelf || settings.defaultShelf}`);
-    parts.push(
-      `reading_time: "~${article.readingTimeMinutes} min (${article.wordCount} words)"`
-    );
 
-    if (settings.frontmatterTags && settings.frontmatterTags.trim()) {
-      const tags = settings.frontmatterTags
-        .split(",")
-        .map((t) => t.trim().replace(/^#/, ""))
-        .filter(Boolean)
-        .map((t) => (t === "article" ? "reading/article" : t));
-      
-      const uniqueTags = Array.from(new Set(tags));
-      if (uniqueTags.length > 0) {
-        parts.push("tags:");
-        uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
+    for (const prop of properties) {
+      if (!prop.enabled || !prop.key.trim()) continue;
+      const key = prop.key.trim();
+
+      switch (prop.field) {
+        case "title":
+          parts.push(`${key}: "${article.title.replace(/"/g, '\\"')}"`);
+          break;
+        case "source":
+          parts.push(`${key}: "${article.url}"`);
+          break;
+        case "author":
+          if (article.byline) {
+            parts.push(`${key}: "${article.byline.replace(/"/g, '\\"')}"`);
+          } else {
+            parts.push(`${key}: ""`);
+          }
+          break;
+        case "site":
+          if (article.siteName) {
+            parts.push(`${key}: "${article.siteName.replace(/"/g, '\\"')}"`);
+          } else {
+            parts.push(`${key}: ""`);
+          }
+          break;
+        case "published":
+          if (article.publishedTime) {
+            parts.push(`${key}: ${article.publishedTime}`);
+          } else {
+            parts.push(`${key}:`);
+          }
+          break;
+        case "clipped":
+          parts.push(`${key}: ${article.clippedAt}`);
+          break;
+        case "shelf": {
+          const shelfVal = article.shelf !== undefined ? article.shelf : settings.defaultShelf;
+          if (shelfVal) {
+            parts.push(`${key}: ${shelfVal}`);
+          } else {
+            parts.push(`${key}:`);
+          }
+          break;
+        }
+        case "reading_time":
+          parts.push(
+            `${key}: "~${article.readingTimeMinutes} min (${article.wordCount} words)"`
+          );
+          break;
+        case "type": {
+          const typeList =
+            article.types !== undefined
+              ? article.types
+              : settings.defaultType
+                ? settings.defaultType.split(",").map((t) => t.trim()).filter(Boolean)
+                : [];
+          if (typeList.length > 0) {
+            parts.push(`${key}:`);
+            for (const t of typeList) {
+              parts.push(`  - ${t}`);
+            }
+          } else {
+            parts.push(`${key}: []`);
+          }
+          break;
+        }
+        case "tags": {
+          const tagList =
+            article.tags !== undefined
+              ? article.tags
+              : settings.frontmatterTags
+                ? settings.frontmatterTags
+                    .split(",")
+                    .map((t) => t.trim().replace(/^#/, ""))
+                    .filter(Boolean)
+                : [];
+          const uniqueTags = Array.from(new Set(tagList));
+          if (uniqueTags.length > 0) {
+            parts.push(`${key}:`);
+            uniqueTags.forEach((tag) => parts.push(`  - ${tag}`));
+          } else {
+            parts.push(`${key}: []`);
+          }
+          break;
+        }
+        case "custom":
+          parts.push(`${key}: ${JSON.stringify(prop.customValue || "")}`);
+          break;
+        default:
+          break;
       }
     }
+
     parts.push("---");
   }
 

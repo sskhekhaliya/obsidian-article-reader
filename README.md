@@ -13,7 +13,8 @@ Powered by Mozilla's Readability engine (the same algorithm behind Firefox Reade
 - 📂 **Target Folder Selection**: Choose or create a specific folder in your vault to store clipped articles (with real-time folder autocomplete).
 - ⏱️ **Reading Time & Word Count**: Automatically estimates reading time and word count, stored cleanly in note properties.
 - 🕒 **Obsidian Date & Time Types**: `published` and `clipped` are formatted in ISO 8601 so Obsidian natively recognizes them as date-time properties.
-- 🏷️ **Native Properties**: Clean YAML frontmatter (`title`, `source`, `author`, `site`, `published`, `clipped`, `shelf`, `reading_time`, `tags: [reading/article]`).
+- 🏷️ **Frontmatter Properties Manager**: Customize, toggle, rename, and add frontmatter properties (`title`, `source`, `author`, `site`, `published`, `clipped`, `shelf`, `reading_time`, `type`, `tags`) directly in Settings.
+- 📑 **Optional Type & Tags during Clipping**: Categorize articles on the fly by entering types (e.g. `article`, `essay`, `tutorial`) as an optional list property, along with custom tags. If omitted, they won't clutter your frontmatter.
 - 📋 **Clipboard Auto-detection**: Automatically prefills web URLs from your clipboard or lets you clip instantly with a single shortcut.
 - 🖼️ **Image & Link Resolution**: Resolves relative links and lazy-loaded images to absolute URLs so your notes render cleanly offline.
 - 💻 **Syntax-Highlighted Code Blocks & Tables**: Converts code blocks with language detection and renders HTML tables as markdown tables.
@@ -34,8 +35,12 @@ published: 2026-05-12T10:00:00
 clipped: 2026-10-11T20:15:00
 shelf: to-read
 reading_time: "~6 min (1114 words)"
+type:
+  - article
+  - productivity
 tags:
   - reading/article
+  - to-read
 ---
 Habits are the compound interest of self-improvement...
 ```
@@ -48,7 +53,7 @@ Habits are the compound interest of self-improvement...
 1. Click the **book-open** icon on the left ribbon, or press `Ctrl/Cmd + P` and search for:
    `Article Reader: Clip article from URL`
 2. Enter or paste the website link.
-3. (Optional) Choose a destination folder, select a reading shelf (`to-read`, `currently-reading`, `read`), or edit the note title.
+3. (Optional) Choose a destination folder, select a reading shelf (`to-read`, `currently-reading`, `read`), add types (comma-separated list), or additional tags.
 4. Click **Fetch & Save** (or press `Enter`).
 
 ### 2. Fast Clip from Clipboard
@@ -61,18 +66,28 @@ Habits are the compound interest of self-improvement...
 
 ## ⚙️ Settings
 
-Go to **Settings** → **Article Reader**:
+Settings are divided into 3 dedicated sub-tabs:
 
-| Setting | Description | Default |
-|---|---|---|
-| **Article Folder** | The folder in your vault where articles are saved (with folder autocomplete) | `Articles` |
-| **Create folder if missing** | Automatically creates vault directories if they don't already exist | `true` |
-| **Default Shelf** | Default reading status assigned to properties (`to-read`, `currently-reading`, `read`) | `to-read` |
-| **Note title format** | Pattern for note naming (`{{title}}`, `{{date}}`) | `{{title}}` |
-| **Include YAML properties** | Adds frontmatter properties (title, source, author, site, published, clipped, shelf, reading_time, tags) | `true` |
-| **Default tags** | Comma-separated tags added to properties | `reading/article` |
-| **Include article summary** | Includes the excerpt or summary if detected by the reader mode | `false` |
-| **Open note after saving** | Automatically opens the newly created note in an editor leaf | `true` |
+### 1. General Tab
+- **Article Folder**: The folder in your vault where articles are saved (with folder autocomplete).
+- **Create folder if missing**: Automatically creates vault directories if they don't already exist.
+- **Note title format**: Pattern for note naming (`{{title}}`, `{{date}}`).
+- **Include YAML properties**: Enables frontmatter properties on clipped notes.
+- **Include article summary**: Includes the excerpt or summary if detected by reader mode.
+- **Open note after saving**: Automatically opens the newly created note in an editor leaf.
+
+### 2. Properties Tab (Frontmatter Manager)
+- **Presence & Inclusion**: Toggle properties on/off to decide which ones are included in your generated notes.
+- **Drag & Drop Order**: Drag rows to change the exact order in which properties appear in YAML frontmatter (whichever is placed first or last).
+- **Rename Keys & Labels**: Rename any YAML property key (e.g. rename `type` to `category` or `shelf` to `status`).
+- **Add / Delete / Reset**: Add new custom properties or reset to defaults with one click.
+
+### 3. Defaults Tab (Default Values)
+- **Default Shelf**: Preselected reading shelf (`to-read`, `currently-reading`, `read`, or `None / Empty`).
+- **Default Type**: Preselected default value(s) for the `type` property (e.g. `article`).
+- **Default Tags**: Base tags added to properties (e.g. `reading/article`).
+- **Custom Defaults**: Static default values for any custom properties you create.
+- *Tip: If an enabled property is left empty during clipping, it will still appear in your frontmatter as an empty field.*
 
 ---
 

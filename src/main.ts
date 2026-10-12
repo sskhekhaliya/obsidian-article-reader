@@ -1,5 +1,5 @@
 import { Notice, Plugin, TFile, TFolder, normalizePath } from "obsidian";
-import { ArticleData, ArticleReaderSettings, ArticleShelf, DEFAULT_SETTINGS } from "./types";
+import { ArticleData, ArticleReaderSettings, ArticleShelf, DEFAULT_PROPERTIES, DEFAULT_SETTINGS } from "./types";
 import { ArticleReaderSettingTab } from "./settings";
 import { ArticleUrlModal } from "./url-modal";
 import { fetchAndParseArticle, formatArticleNote, sanitizeFileName } from "./parser";
@@ -39,6 +39,22 @@ export default class ArticleReaderPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+    if (!this.settings.properties || !Array.isArray(this.settings.properties) || this.settings.properties.length === 0) {
+      this.settings.properties = JSON.parse(JSON.stringify(DEFAULT_PROPERTIES));
+    } else {
+      const existingFieldIds = new Set(this.settings.properties.map((p) => p.field));
+      for (const defProp of DEFAULT_PROPERTIES) {
+        if (!existingFieldIds.has(defProp.field)) {
+          this.settings.properties.push({ ...defProp });
+        }
+      }
+    }
+
+    if (this.settings.defaultType === undefined) {
+      this.settings.defaultType = "";
+    }
+
     if (this.settings.frontmatterTags) {
       const tagList = this.settings.frontmatterTags
         .split(",")
@@ -141,9 +157,22 @@ export default class ArticleReaderPlugin extends Plugin {
     article: ArticleData,
     folderOverride?: string,
     customTitle?: string,
-    shelfOverride?: ArticleShelf
+    shelfOverride?: ArticleShelf | "",
+    typesOverride?: string[],
+    tagsOverride?: string[]
   ): Promise<TFile> {
-    article.shelf = shelfOverride || article.shelf || this.settings.defaultShelf;
+    article.shelf =
+      shelfOverride !== undefined
+        ? shelfOverride
+        : article.shelf !== undefined
+          ? article.shelf
+          : this.settings.defaultShelf;
+    if (typesOverride !== undefined) {
+      article.types = typesOverride;
+    }
+    if (tagsOverride !== undefined) {
+      article.tags = tagsOverride;
+    }
 
     const targetFolder =
       typeof folderOverride === "string" ? folderOverride : this.settings.folderPath;
